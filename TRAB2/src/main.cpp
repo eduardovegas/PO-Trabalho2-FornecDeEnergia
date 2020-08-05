@@ -159,7 +159,7 @@ void solve(Data& data)
     ////////////////////////////////////////////////////////
     //Restricoes
 
-    //Restricoes (1): determina se a usina esta ligada ou desligada a partir de sua producao
+    //Restricoes (1.1): força a usina a produzir pelo menos o mínimo se ela for ligada. (1.2): força a ligação de uma usina se está produzindo, e também limita o máximo.
     for(int i = 0; i < data.getNUsinas(); i++)
     {
         for(int j = 0; j < data.getNUnidadesUsina(i); j++)
@@ -249,8 +249,10 @@ void solve(Data& data)
     }
 
     std::cout << "\nstatus: " << trab.getStatus() << std::endl;
-    std::cout << "\nCusto diario minimo: " << trab.getObjValue() << std::endl;
-    std::cout << "Custo diario por hora: " << trab.getObjValue()/24.0 << std::endl;
+    //std::cout << "\nCusto diario minimo: " << trab.getObjValue() << std::endl;
+    //std::cout << "Custo diario por hora: " << trab.getObjValue()/24.0 << std::endl;
+    printf("\nCusto diario minimo: %.1lf$\n", trab.getObjValue());
+    printf("Custo diario por hora: %.1lf$\n", trab.getObjValue()/24.0);
 
     puts("");
     for(int k = 0; k < data.getNPeriodos(); k++) //Exibe quantas unidades das usinas estao ligadas no periodo k
@@ -323,13 +325,15 @@ void solve(Data& data)
         }
 
         printf("USINA TIPO #%d:\n", i+1);
-        std::cout << "Custo da produção minima = " << aux << std::endl;
-        std::cout << "Custo adicional = " << aux2 << std::endl;
-        std::cout << "Custo de ligação = " << aux3 << std::endl;
+        //std::cout << "Custo da produção minima = " << aux << std::endl;
+        //std::cout << "Custo adicional = " << aux2 << std::endl;
+        //std::cout << "Custo de ligação = " << aux3 << std::endl;
+        printf("Custo adicional = %.1lf$\n", aux);
+        printf("Custo da produção minima = %.1lf$\n", aux2);
+        printf("Custo de ligação = %.1lf$\n", aux3);
 
         puts("");
 
     }
 
 }
-
