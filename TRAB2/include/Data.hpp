@@ -13,12 +13,12 @@ class Data
         std::vector<int> n_unidades;
 
         std::vector<int> duracao;
-        std::vector<int> demanda;
-        std::vector<int> prod_min;
-        std::vector<int> prod_max;
-        std::vector<int> custo_prod_min;
-        std::vector<int> custo_adicional;
-        std::vector<int> custo_ligacao;
+        std::vector<double> demanda;
+        std::vector<double> prod_min;
+        std::vector<double> prod_max;
+        std::vector<double> custo_prod_min;
+        std::vector<double> custo_adicional;
+        std::vector<double> custo_ligacao;
 
     public:
 
@@ -28,12 +28,12 @@ class Data
         int getNUsinas();
         int getNUnidadesUsina(int usina);
         int getDuracaoPeriodo(int periodo);
-        int getDemandaPeriodo(int periodo);
-        int getProdMinUsina(int usina);
-        int getProdMaxUsina(int usina);
-        int getCustoProdMinUsina(int usina);
-        int getCustoAdicionalUsina(int usina);
-        int getCustoLigacaoUsina(int usina);
+        double getDemandaPeriodo(int periodo);
+        double getProdMinUsina(int usina);
+        double getProdMaxUsina(int usina);
+        double getCustoProdMinUsina(int usina);
+        double getCustoAdicionalUsina(int usina);
+        double getCustoLigacaoUsina(int usina);
 
 };
 

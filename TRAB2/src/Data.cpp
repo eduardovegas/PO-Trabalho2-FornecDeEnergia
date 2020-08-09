@@ -36,7 +36,7 @@ Data::Data(char* filePath)
 
     //lendo duracao e demanda dos periodos
     duracao = std::vector<int>(n_periodos, 0);
-    demanda = std::vector<int>(n_periodos, 0);
+    demanda = std::vector<double>(n_periodos, 0);
     for(int i = 0; i < n_periodos; i++)
     {
         if(fscanf(f, "%d", &duracao[i]) != 1)
@@ -44,7 +44,7 @@ Data::Data(char* filePath)
             printf("Problem while reading instance.\n");
             exit(1);
         }
-        if(fscanf(f, "%d", &demanda[i]) != 1)
+        if(fscanf(f, "%lf", &demanda[i]) != 1)
         {
             printf("Problem while reading instance.\n");
             exit(1);
@@ -52,16 +52,16 @@ Data::Data(char* filePath)
     }
 
     //lendo prod min e prod max das usinas
-    prod_min = std::vector<int>(n_usinas, 0);
-    prod_max = std::vector<int>(n_usinas, 0);
+    prod_min = std::vector<double>(n_usinas, 0);
+    prod_max = std::vector<double>(n_usinas, 0);
     for(int i = 0; i < n_usinas; i++)
     {
-        if(fscanf(f, "%d", &prod_min[i]) != 1)
+        if(fscanf(f, "%lf", &prod_min[i]) != 1)
         {
             printf("Problem while reading instance.\n");
             exit(1);
         }
-        if(fscanf(f, "%d", &prod_max[i]) != 1)
+        if(fscanf(f, "%lf", &prod_max[i]) != 1)
         {
             printf("Problem while reading instance.\n");
             exit(1);
@@ -69,24 +69,24 @@ Data::Data(char* filePath)
     }
 
     //lendo custos das usinas
-    custo_prod_min = std::vector<int>(n_usinas, 0);
-    custo_adicional = std::vector<int>(n_usinas, 0);
-    custo_ligacao = std::vector<int>(n_usinas, 0);
+    custo_prod_min = std::vector<double>(n_usinas, 0);
+    custo_adicional = std::vector<double>(n_usinas, 0);
+    custo_ligacao = std::vector<double>(n_usinas, 0);
     for(int i = 0; i < n_usinas; i++)
     {
-        if(fscanf(f, "%d", &custo_prod_min[i]) != 1)
+        if(fscanf(f, "%lf", &custo_prod_min[i]) != 1)
         {
             printf("Problem while reading instance.\n");
             exit(1);
         }
 
-        if(fscanf(f, "%d", &custo_adicional[i]) != 1)
+        if(fscanf(f, "%lf", &custo_adicional[i]) != 1)
         {
             printf("Problem while reading instance.\n");
             exit(1);
         }
 
-        if(fscanf(f, "%d", &custo_ligacao[i]) != 1)
+        if(fscanf(f, "%lf", &custo_ligacao[i]) != 1)
         {
             printf("Problem while reading instance.\n");
             exit(1);
@@ -136,32 +136,32 @@ int Data::getDuracaoPeriodo(int periodo)
     return duracao[periodo];
 }
 
-int Data::getDemandaPeriodo(int periodo)
+double Data::getDemandaPeriodo(int periodo)
 {
     return demanda[periodo];
 }
 
-int Data::getProdMinUsina(int usina)
+double Data::getProdMinUsina(int usina)
 {
     return prod_min[usina];
 }
 
-int Data::getProdMaxUsina(int usina)
+double Data::getProdMaxUsina(int usina)
 {
     return prod_max[usina];
 }
 
-int Data::getCustoProdMinUsina(int usina)
+double Data::getCustoProdMinUsina(int usina)
 {
     return custo_prod_min[usina];
 }
 
-int Data::getCustoAdicionalUsina(int usina)
+double Data::getCustoAdicionalUsina(int usina)
 {
     return custo_adicional[usina];
 }
 
-int Data::getCustoLigacaoUsina(int usina)
+double Data::getCustoLigacaoUsina(int usina)
 {
     return custo_ligacao[usina];
 }

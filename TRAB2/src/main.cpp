@@ -91,7 +91,7 @@ void solve(Data& data)
         IloArray <IloNumVarArray> vetAux(env, data.getNUnidadesUsina(i));
         for(int j = 0; j < data.getNUnidadesUsina(i); j++)
         {
-            IloNumVarArray vetor(env, data.getNPeriodos(), 0, data.getProdMaxUsina(i));
+            IloNumVarArray vetor(env, data.getNPeriodos(), 0, IloInfinity);
             /*for(int k = 0; k < data.getNPeriodos; k++)
             {
                 vetor[k].setBounds(0, data.getProdMaxUsina(i));
@@ -117,41 +117,80 @@ void solve(Data& data)
         }
     }
 
+    //variavel Qijk: Qijk representando o controle da produção da variável Pijk, deixando a FO linear
+    IloArray <IloArray <IloNumVarArray>> q(env, data.getNUsinas());
+    for(int i = 0; i < data.getNUsinas(); i++)
+    {
+        IloArray <IloNumVarArray> vetAux(env, data.getNUnidadesUsina(i));
+        for(int j = 0; j < data.getNUnidadesUsina(i); j++)
+        {
+            IloNumVarArray vetor(env, data.getNPeriodos(), 0, IloInfinity);
+            vetAux[j] = vetor;
+        }
+
+        q[i] = vetAux;
+    }
+
+    //adiciona a variavel Qijk ao modelo
+    for(int i = 0; i < data.getNUsinas(); i++)
+    {
+        for(int j = 0; j < data.getNUnidadesUsina(i); j++)
+        {
+            for(int k = 0; k < data.getNPeriodos(); k++)
+            {
+                char name[100];
+                sprintf(name, "Q(%d)(%d)(%d)", i+1, j+1, k+1);
+                q[i][j][k].setName(name);
+                modelo.add(q[i][j][k]);
+            }
+        }
+    }
+
+    //variavel Fij: Fij representando o controle custo de ligação do primeiro dia
+    IloArray <IloBoolVarArray> f(env, data.getNUsinas());
+    for(int i = 0; i < data.getNUsinas(); i++)
+    {
+        IloBoolVarArray vetor(env, data.getNUnidadesUsina(i));
+        f[i] = vetor;
+    }
+
+    //adiciona a variavel Fij ao modelo
+    for(int i = 0; i < data.getNUsinas(); i++)
+    {
+        for(int j = 0; j < data.getNUnidadesUsina(i); j++)
+        {
+            char name[100];
+            sprintf(name, "F(%d)(%d)", i+1, j+1);
+            f[i][j].setName(name);
+            modelo.add(f[i][j]);
+        }
+    }
+
     //fim das variaveis
     ///////////////////////////////////////////////////////
 
     ////////////////////////////////////////////////////////
     //Criando a Função Objetivo (FO) 
-    IloExpr sumCL(env);
-    IloExpr sumCP(env);
-    for(int i = 0; i < data.getNUsinas(); i++)
-    {
-        for(int j = 0; j < data.getNUnidadesUsina(i); j++)
-        {
-            for(int k = 0; k < data.getNPeriodos(); k++)
-            {
-                sumCL += data.getCustoLigacaoUsina(i)*z[i][j][k];
-            }
-        }
-    }
+    IloExpr OBJ(env);
 
     for(int i = 0; i < data.getNUsinas(); i++)
     {
         int CPMin = data.getCustoProdMinUsina(i);
-        int PMin = data.getProdMinUsina(i);
         int Cadi = data.getCustoAdicionalUsina(i);
+        int CLig = data.getCustoLigacaoUsina(i);
 
         for(int j = 0; j < data.getNUnidadesUsina(i); j++)
         {
+
+            OBJ += CLig*f[i][j];
+
             for(int k = 0; k < data.getNPeriodos(); k++)
             {
-                sumCP += (CPMin +(p[i][j][k] - PMin)*Cadi)*x[i][j][k]*data.getDuracaoPeriodo(k);
+                OBJ += (CPMin*x[i][j][k] + q[i][j][k]*Cadi)*data.getDuracaoPeriodo(k) + CLig*z[i][j][k];
             }
         }
     }
 
-    IloExpr OBJ(env);
-    OBJ += sumCL + sumCP;
     // Adicionando a FO
     modelo.add(IloMinimize(env, OBJ));
     //////////////////////////////////////////////////////////
@@ -159,7 +198,7 @@ void solve(Data& data)
     ////////////////////////////////////////////////////////
     //Restricoes
 
-    //Restricoes (1.1): força a usina a produzir pelo menos o mínimo se ela for ligada. (1.2): força a ligação de uma usina se está produzindo, e também limita o máximo.
+    //Restricoes (1.1): força a usina a produzir pelo menos o mínimo se ela for ligada (1.2): força a ligação de uma usina se está produzindo, e também limita o máximo
     for(int i = 0; i < data.getNUsinas(); i++)
     {
         for(int j = 0; j < data.getNUnidadesUsina(i); j++)
@@ -201,7 +240,23 @@ void solve(Data& data)
         modelo.add(r);
     }
 
-    //Restricoes (3): se uma usina foi ligada no periodo k(unico caso possivel: 0 1)
+    //Restricoes (3): controle da produção para linearizar a FO
+    for(int i = 0; i < data.getNUsinas(); i++)
+    {
+        for(int j = 0; j < data.getNUnidadesUsina(i); j++)
+        {
+            for(int k = 0; k < data.getNPeriodos(); k++)
+            {
+                IloRange r = (q[i][j][k] - (p[i][j][k] - data.getProdMinUsina(i)) >= 0);
+                char name[100];
+                sprintf(name, "RESQ(%d)(%d)(%d)", i+1, j+1, k+1);
+                r.setName(name);
+                modelo.add(r);
+            }
+        }
+    }
+
+    //Restricoes (4): se uma usina foi ligada no periodo k(unico caso possivel: 0 1)
     for(int i = 0; i < data.getNUsinas(); i++)
     {
         for(int j = 0; j < data.getNUnidadesUsina(i); j++)
@@ -227,6 +282,20 @@ void solve(Data& data)
             }
         }
     }
+
+    //Restricoes (5): controle do custo de ligação do primeiro dia
+    for(int i = 0; i < data.getNUsinas(); i++)
+    {
+        for(int j = 0; j < data.getNUnidadesUsina(i); j++)
+        {
+            IloRange r = (f[i][j] - (x[i][j][0] - z[i][j][0]) >= 0);
+            char name[100];
+            sprintf(name, "PDIA(%d)(%d)", i+1, j+1);
+            r.setName(name);
+            modelo.add(r);
+        }
+    }
+
     
     //fim das restricoes
     ////////////////////////////////////////////////////////*/
@@ -264,7 +333,7 @@ void solve(Data& data)
 
             for(int j = 0; j < data.getNUnidadesUsina(i); j++)
             {
-                if(trab.getValue(x[i][j][k]) > 0)
+                if(trab.getValue(x[i][j][k]) > 0.0)
                 {
                     aux++;
                 }
@@ -290,7 +359,7 @@ void solve(Data& data)
         {
             for(int j = 0; j < data.getNUnidadesUsina(i); j++)
             {
-                if(trab.getValue(p[i][j][k]) > 0)
+                if(trab.getValue(p[i][j][k]) > 0.000000)
                 {
                     printf(" Usina do tipo #%d unidade #%d irá produzir: ", i+1, j+1);
                     std::cout << trab.getValue(p[i][j][k]) << "MW" << std::endl;
@@ -318,18 +387,20 @@ void solve(Data& data)
         {
             for(int k = 0; k < data.getNPeriodos(); k++) 
             {
-                aux += trab.getValue(x[i][j][k]) * data.getCustoProdMinUsina(i) * data.getDuracaoPeriodo(k) ;
-                aux2 += trab.getValue(x[i][j][k]) * data.getCustoAdicionalUsina(i) * data.getDuracaoPeriodo(k) * (trab.getValue(p[i][j][k]) - data.getProdMinUsina(i));
+                aux += trab.getValue(x[i][j][k]) * data.getCustoProdMinUsina(i) * data.getDuracaoPeriodo(k);
+
+                if(trab.getValue(q[i][j][k]) > 0.000000)
+                {
+                    aux2 += trab.getValue(q[i][j][k]) * data.getCustoAdicionalUsina(i) * data.getDuracaoPeriodo(k);
+                }
+
                 aux3 += trab.getValue(z[i][j][k]) * data.getCustoLigacaoUsina(i);
             }
         }
 
         printf("USINA TIPO #%d:\n", i+1);
-        //std::cout << "Custo da produção minima = " << aux << std::endl;
-        //std::cout << "Custo adicional = " << aux2 << std::endl;
-        //std::cout << "Custo de ligação = " << aux3 << std::endl;
-        printf("Custo adicional = %.1lf$\n", aux);
-        printf("Custo da produção minima = %.1lf$\n", aux2);
+        printf("Custo adicional = %.1lf$\n", aux2);
+        printf("Custo da produção minima = %.1lf$\n", aux);
         printf("Custo de ligação = %.1lf$\n", aux3);
 
         puts("");
