@@ -146,26 +146,6 @@ void solve(Data& data)
         }
     }
 
-    //variavel Fij: Fij representando o controle custo de ligação do primeiro dia
-    IloArray <IloBoolVarArray> f(env, data.getNUsinas());
-    for(int i = 0; i < data.getNUsinas(); i++)
-    {
-        IloBoolVarArray vetor(env, data.getNUnidadesUsina(i));
-        f[i] = vetor;
-    }
-
-    //adiciona a variavel Fij ao modelo
-    for(int i = 0; i < data.getNUsinas(); i++)
-    {
-        for(int j = 0; j < data.getNUnidadesUsina(i); j++)
-        {
-            char name[100];
-            sprintf(name, "F(%d)(%d)", i+1, j+1);
-            f[i][j].setName(name);
-            modelo.add(f[i][j]);
-        }
-    }
-
     //fim das variaveis
     ///////////////////////////////////////////////////////
 
@@ -181,9 +161,6 @@ void solve(Data& data)
 
         for(int j = 0; j < data.getNUnidadesUsina(i); j++)
         {
-
-            OBJ += CLig*f[i][j];
-
             for(int k = 0; k < data.getNPeriodos(); k++)
             {
                 OBJ += (CPMin*x[i][j][k] + q[i][j][k]*Cadi)*data.getDuracaoPeriodo(k) + CLig*z[i][j][k];
@@ -283,20 +260,6 @@ void solve(Data& data)
         }
     }
 
-    //Restricoes (5): controle do custo de ligação do primeiro dia
-    for(int i = 0; i < data.getNUsinas(); i++)
-    {
-        for(int j = 0; j < data.getNUnidadesUsina(i); j++)
-        {
-            IloRange r = (f[i][j] - (x[i][j][0] - z[i][j][0]) >= 0);
-            char name[100];
-            sprintf(name, "PDIA(%d)(%d)", i+1, j+1);
-            r.setName(name);
-            modelo.add(r);
-        }
-    }
-
-    
     //fim das restricoes
     ////////////////////////////////////////////////////////*/
 
@@ -320,8 +283,8 @@ void solve(Data& data)
     std::cout << "\nstatus: " << trab.getStatus() << std::endl;
     //std::cout << "\nCusto diario minimo: " << trab.getObjValue() << std::endl;
     //std::cout << "Custo diario por hora: " << trab.getObjValue()/24.0 << std::endl;
-    printf("\nCusto diario minimo: %.1lf$\n", trab.getObjValue());
-    printf("Custo diario por hora: %.1lf$\n", trab.getObjValue()/24.0);
+    printf("\nCusto diario minimo (segundo dia em diante): %.1lf$\n", trab.getObjValue());
+    printf("Custo diario por hora (segundo dia em diante): %.1lf$\n", trab.getObjValue()/24.0);
 
     puts("");
     for(int k = 0; k < data.getNPeriodos(); k++) //Exibe quantas unidades das usinas estao ligadas no periodo k
@@ -333,7 +296,7 @@ void solve(Data& data)
 
             for(int j = 0; j < data.getNUnidadesUsina(i); j++)
             {
-                if(trab.getValue(x[i][j][k]) > 0.0)
+                if(trab.getValue(x[i][j][k]) > 0.000000)
                 {
                     aux++;
                 }
@@ -377,24 +340,32 @@ void solve(Data& data)
 
     puts("X================================================X\n");
 
+    double aux5 = 0;
+
     for(int i = 0; i < data.getNUsinas(); i++) //Exibe os custos diarios de cada usina
     {
         double aux = 0;
         double aux2 = 0;
         double aux3 = 0;
+        double aux4 = 0;
 
         for(int j = 0; j < data.getNUnidadesUsina(i); j++)
         {
             for(int k = 0; k < data.getNPeriodos(); k++) 
             {
-                aux += trab.getValue(x[i][j][k]) * data.getCustoProdMinUsina(i) * data.getDuracaoPeriodo(k);
+                if(trab.getValue(x[i][j][k]) > 0.000000)
+                    aux += trab.getValue(x[i][j][k]) * data.getCustoProdMinUsina(i) * data.getDuracaoPeriodo(k);
 
                 if(trab.getValue(q[i][j][k]) > 0.000000)
-                {
                     aux2 += trab.getValue(q[i][j][k]) * data.getCustoAdicionalUsina(i) * data.getDuracaoPeriodo(k);
-                }
+                
+                if(trab.getValue(z[i][j][k]) > 0.00000)
+                    aux3 += trab.getValue(z[i][j][k]) * data.getCustoLigacaoUsina(i);
+            }
 
-                aux3 += trab.getValue(z[i][j][k]) * data.getCustoLigacaoUsina(i);
+            if(trab.getValue(x[i][j][0]) > 0.00000 && trab.getValue(z[i][j][0]) < 0.1)
+            {
+                aux4 += data.getCustoLigacaoUsina(i);
             }
         }
 
@@ -402,9 +373,12 @@ void solve(Data& data)
         printf("Custo adicional = %.1lf$\n", aux2);
         printf("Custo da produção minima = %.1lf$\n", aux);
         printf("Custo de ligação = %.1lf$\n", aux3);
+        printf("Custo de ligação adicional do dia de origem = %.1lf$\n\n", aux4);
 
-        puts("");
-
+        aux5 += aux4;
     }
+
+    printf("\nCusto do dia de origem : %.1lf$\n", trab.getObjValue() + aux5);
+    printf("Custo do dia de origem por hora: %.1lf$\n\n", (trab.getObjValue() + aux5) / 24.0);
 
 }
